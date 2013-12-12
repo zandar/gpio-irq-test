@@ -220,7 +220,7 @@ int main(int argc, char **argv, char **envp)
 {
         struct pollfd fdset;
         int nfds = 1;
-        int gpio_in_fd, gpio_out_fd, timeout, rc;
+        int gpio_in_fd, gpio_out_fd, timeout, rc, value;
         unsigned int gpio_in, gpio_out;
         unsigned long cntr = 0;
 
@@ -247,12 +247,12 @@ int main(int argc, char **argv, char **envp)
         timeout = POLL_TIMEOUT;
 
         while (1) {
-                memset((void*)fdset, 0, sizeof(fdset));
+                memset(&fdset, 0, sizeof(fdset));
       
                 fdset.fd = gpio_in_fd;
                 fdset.events = POLLPRI;
 
-                rc = poll(fdset, nfds, timeout);
+                rc = poll(&fdset, nfds, timeout);
 
                 if (rc < 0) {
                         printf("\npoll() failed!\n");
@@ -260,7 +260,7 @@ int main(int argc, char **argv, char **envp)
                 }
 
                 if (fdset.revents & POLLPRI) {
-                        printf("\r%d", ++cntr);
+                        printf("\r%lu", ++cntr);
                         gpio_get_value(gpio_in, &value);
                         gpio_set_value(gpio_out, value);
                 }
