@@ -218,38 +218,40 @@ int gpio_fd_close(int fd)
  ****************************************************************/
 int main(int argc, char **argv, char **envp)
 {
-        struct pollfd fdset[2];
-        int nfds = 2;
-        int gpio_fd, timeout, rc;
-        char *buf[MAX_BUF];
-        unsigned int gpio;
-        int len;
+        struct pollfd fdset;
+        int nfds = 1;
+        int gpio_in_fd, gpio_out_fd, timeout, rc;
+        unsigned int gpio_in, gpio_out;
+        unsigned long cntr = 0;
 
-
-
-        if (argc < 2) {
-                printf("Usage: gpio-int <gpio-pin>\n\n");
-                printf("Waits for a change in the GPIO pin voltage level or input on stdin\n");
+        if (argc < 3) {
+                printf("Usage: gpio-int <gpio-input-pin> <gpio-output-pin>\n\n");
+                printf("Waits for a change in the GPIO pin voltage level and copy its value to output pin\n");
                 exit(-1);
         }
 
-        gpio = atoi(argv[1]);
+        gpio_in = atoi(argv[1]);
+        gpio_out = atoi(argv[2]);
 
-        gpio_export(gpio);
-        gpio_set_dir(gpio, 0);
-        gpio_set_edge(gpio, "rising");
-        gpio_fd = gpio_fd_open(gpio);
+        /* initialize input pin */
+        gpio_export(gpio_in);
+        gpio_set_dir(gpio_in, 0);
+        gpio_set_edge(gpio_in, "both");
+        gpio_in_fd = gpio_fd_open(gpio_in);
+
+        /* initialize output pin */
+        gpio_export(gpio_out);
+        gpio_set_dir(gpio_out, 1);
+        gpio_out_fd = gpio_fd_open(gpio_out);
 
         timeout = POLL_TIMEOUT;
  
         while (1) {
                 memset((void*)fdset, 0, sizeof(fdset));
 
-                fdset[0].fd = STDIN_FILENO;
-                fdset[0].events = POLLIN;
       
-                fdset[1].fd = gpio_fd;
-                fdset[1].events = POLLPRI;
+                fdset.fd = gpio_in_fd;
+                fdset.events = POLLPRI;
 
                 rc = poll(fdset, nfds, timeout);      
 
@@ -262,19 +264,17 @@ int main(int argc, char **argv, char **envp)
                         printf(".");
                 }
             
-                if (fdset[1].revents & POLLPRI) {
-                        len = read(fdset[1].fd, buf, MAX_BUF);
-                        printf("\npoll() GPIO %d interrupt occurred\n", gpio);
-                }
 
-                if (fdset[0].revents & POLLIN) {
-                        (void)read(fdset[0].fd, buf, 1);
-                        printf("\npoll() stdin read 0x%2.2X\n", (unsigned int) buf[0]);
+                if (fdset.revents & POLLPRI) {
+                        printf("\r%d", ++cntr);
+                        gpio_get_value(gpio_in, &value);
+                        gpio_set_value(gpio_out, value);
                 }
 
                 fflush(stdout);
         }
 
-        gpio_fd_close(gpio_fd);
+        gpio_fd_close(gpio_in_fd);
+        gpio_fd_close(gpio_out_fd);
         return 0;
 }
