@@ -245,25 +245,19 @@ int main(int argc, char **argv, char **envp)
         gpio_out_fd = gpio_fd_open(gpio_out);
 
         timeout = POLL_TIMEOUT;
- 
+
         while (1) {
                 memset((void*)fdset, 0, sizeof(fdset));
-
       
                 fdset.fd = gpio_in_fd;
                 fdset.events = POLLPRI;
 
-                rc = poll(fdset, nfds, timeout);      
+                rc = poll(fdset, nfds, timeout);
 
                 if (rc < 0) {
                         printf("\npoll() failed!\n");
                         return -1;
                 }
-      
-                if (rc == 0) {
-                        printf(".");
-                }
-            
 
                 if (fdset.revents & POLLPRI) {
                         printf("\r%d", ++cntr);
